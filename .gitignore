@@ -1,0 +1,27 @@
+# 构建产物
+dist/
+*.exe
+*.pdb
+obj/
+bin/
+
+# 运行时生成的文件（每个用户不同，不该进仓库）
+config.ini
+order.ini
+*.log
+.hinted
+.hinted.wpf
+.autostart
+.autostart.wpf
+
+# 用户数据
+Dock/
+
+# 旧版本备份
+backup/
+
+# 编辑器
+.vs/
+.vscode/
+*.user
+*.suo
