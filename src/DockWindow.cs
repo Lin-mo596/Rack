@@ -703,12 +703,49 @@ namespace RackWpf
         /// </summary>
         private static ContextMenu MakeStyledMenu()
         {
-            // 2026-10-20 排查记录：自定义 ControlTemplate 会让 ContextMenu 测量塌成 1x1
-            // （右键后出现 3 个 1x1@(0,0) 的隐藏窗口），菜单完全不可见。
-            // 现已回退到最简形态，先确认基线可用，再做美化。
             ContextMenu menu = new ContextMenu();
             menu.FontFamily = Theme.Font;
             menu.FontSize = 12.5;
+
+            // 颜色统一在模板外用 TemplateBinding 注入，模板本身不写死颜色 ——
+            // 这样调透明度只是换一支刷子，不用重建模板。
+            // alpha 来自 config.ini 的 ui.menuAlpha。
+            bool lightMenu = Theme.Light;
+            System.Windows.Media.Color baseCol = lightMenu
+                ? System.Windows.Media.Color.FromRgb(252, 252, 252)
+                : System.Windows.Media.Color.FromRgb(32, 32, 36);
+            menu.Background = Theme.Solid(System.Windows.Media.Color.FromArgb(
+                (byte)Cfg.MenuAlpha, baseCol.R, baseCol.G, baseCol.B));
+            // 深色主题下必须显式给文字色，否则深底配深字直接看不见
+            menu.Foreground = Theme.Solid(lightMenu
+                ? System.Windows.Media.Color.FromRgb(24, 24, 28)
+                : System.Windows.Media.Color.FromRgb(238, 238, 244));
+            System.Windows.Media.Color lineCol = Theme.Line;
+            menu.BorderBrush = Theme.Solid(System.Windows.Media.Color.FromArgb(
+                70, lineCol.R, lineCol.G, lineCol.B));
+
+            // 圆角只能靠换模板实现，但必须原样保留 WPF 默认模板的测量链：
+            //   Border → ScrollViewer → ItemsPresenter
+            // 2026-10-20 两次失败都是因为砍断了这条链：
+            //   · 把 StackPanel 直接当 ItemsHost（没有 ScrollViewer 参与测量）
+            //   · 用 ItemsPresenter 却没套 ScrollViewer，且属性名写成
+            //     DirectionalContained（正确名是 DirectionalNavigation）
+            // 另：菜单项样式一律不碰 ItemContainerStyle。显式 Style 会顶掉 MenuItem 的
+            // 主题样式，而 MenuItem 的默认模板正来自主题样式 —— 结果每项高度 0，整个菜单塌掉。
+            string tpl =
+                "<ControlTemplate xmlns='http://schemas.microsoft.com/winfx/2006/xaml/presentation'" +
+                " xmlns:x='http://schemas.microsoft.com/winfx/2006/xaml'" +
+                " TargetType='{x:Type ContextMenu}'>" +
+                "<Border CornerRadius='10' Background='{TemplateBinding Background}'" +
+                " BorderBrush='{TemplateBinding BorderBrush}' BorderThickness='1' Padding='4'>" +
+                "<ScrollViewer CanContentScroll='True'" +
+                " VerticalScrollBarVisibility='Auto' HorizontalScrollBarVisibility='Disabled'>" +
+                "<ItemsPresenter KeyboardNavigation.DirectionalNavigation='Cycle'" +
+                " Grid.IsSharedSizeScope='True'/>" +
+                "</ScrollViewer>" +
+                "</Border>" +
+                "</ControlTemplate>";
+            menu.Template = (ControlTemplate)System.Windows.Markup.XamlReader.Parse(tpl);
             return menu;
         }
         // ── 右键菜单 ──
@@ -777,6 +814,27 @@ namespace RackWpf
             menu.Items.Add(pull);
 
             menu.Closed += delegate { _suppressClose = false; };
+
+            // 诊断用：弹出后延迟一拍再读尺寸。布局要等这一拍才完成，
+            // 在 IsOpen=true 之后立刻读永远是 0，看不出真假。
+            // W/H 是正常数值 = 模板测量链通；接近 0 = 又塌缩了。
+            menu.Opened += delegate
+            {
+                ContextMenu self = menu;
+                self.Dispatcher.BeginInvoke(new Action(delegate
+                {
+                    try
+                    {
+                        File.AppendAllText(Path.Combine(Store.Root, "menu.log"),
+                            DateTime.Now.ToString("HH:mm:ss.fff") + "  Opened  W=" +
+                            self.ActualWidth.ToString("F0") + "  H=" +
+                            self.ActualHeight.ToString("F0") + "  Items=" + self.Items.Count +
+                            Environment.NewLine);
+                    }
+                    catch { }
+                }), System.Windows.Threading.DispatcherPriority.Background);
+            };
+
             menu.PlacementTarget = owner;
             menu.IsOpen = true;
         }

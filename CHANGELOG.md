@@ -2,6 +2,20 @@
 
 本项目遵循 [语义化版本](https://semver.org/lang/zh-CN/)。
 
+## [1.1.0] - 2026-10-22
+
+### 新增
+
+- 右键菜单改为圆角，并跟随浅色 / 深色主题
+- 右键菜单、设置窗口的底色不透明度可各自调节（`ui.menuAlpha` / `ui.winAlpha`，0-255）
+- 设置窗口改为无边框圆角窗口：自绘标题栏、整体半透明、拖动滑块即时预览
+- 新增设置项「打开时默认钉住」（`beh.pinByDefault`）
+
+### 修复
+
+- 修复右键菜单完全不弹出的问题。根因是自定义 `ContextMenu` 模板，以及没有 `BasedOn`
+  的 `ItemContainerStyle`，两者都会顶掉 WPF 的默认模板，让菜单测量塌缩成 0 尺寸
+
 ## [1.0.0] - 2026-10-20
 
 首个正式版本。
@@ -28,4 +42,5 @@
 - 手动解析 ICO 结构，正确还原 PNG 压缩的图标（`.NET` 的 `Icon.ToBitmap()` 在此有 bug）
 - 读取 `.url` 文件内嵌的 `IconFile=` 字段，还原 Steam 游戏图标
 
+[1.1.0]: https://github.com/Lin-mo596/Rack/releases/tag/v1.1.0
 [1.0.0]: https://github.com/Lin-mo596/Rack/releases/tag/v1.0.0

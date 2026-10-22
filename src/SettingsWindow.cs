@@ -27,6 +27,9 @@ namespace RackWpf
         private CheckBox _shadowChk;
         private Slider _alphaBar;
         private TextBlock _alphaVal;
+        private Slider _menuAlphaBar;
+        private Slider _winAlphaBar;
+        private Border _shell;
 
         private uint _hkMods, _hkVk;
 
@@ -35,35 +38,62 @@ namespace RackWpf
             Title = "Rack 设置";
             WindowStartupLocation = WindowStartupLocation.CenterScreen;
             ResizeMode = ResizeMode.NoResize;
-            Width = 540;
-            Height = 720;
-            Background = Theme.Solid(Theme.Light
-                ? System.Windows.Media.Color.FromRgb(247, 247, 251)
-                : System.Windows.Media.Color.FromRgb(28, 28, 32));
+            // 去掉系统标题栏改为自绘。AllowsTransparency 是真半透明和圆角的前提：
+            // 不开它，窗口底色永远不透明，圆角外面会露出方块。
+            WindowStyle = WindowStyle.None;
+            AllowsTransparency = true;
+            Background = System.Windows.Media.Brushes.Transparent;
+            Width = 560;
+            Height = 740;
             FontFamily = Theme.Font;
             Foreground = Theme.Solid(Theme.Text);
             SnapsToDevicePixels = true;
             UseLayoutRounding = true;
 
+            System.Windows.Media.Color ln = Theme.Line;
+
+            // 外壳：圆角 + 半透明底。窗口整块透明，所有观感都由这一层提供。
+            _shell = new Border();
+            _shell.CornerRadius = new CornerRadius(12);
+            _shell.BorderThickness = new Thickness(1);
+            _shell.BorderBrush = Theme.Solid(System.Windows.Media.Color.FromArgb(
+                90, ln.R, ln.G, ln.B));
+            ApplyShellAlpha(Cfg.WinAlpha);
+
+            // 无边框窗口没有系统阴影，自己补一层，否则看着像贴在屏幕上的纸片
+            System.Windows.Media.Effects.DropShadowEffect sh =
+                new System.Windows.Media.Effects.DropShadowEffect();
+            sh.BlurRadius = 16;
+            sh.ShadowDepth = 2;
+            sh.Opacity = 0.20;
+            sh.Color = System.Windows.Media.Colors.Black;
+            _shell.Effect = sh;
+
             Grid root = new Grid();
+            root.RowDefinitions.Add(new RowDefinition { Height = new GridLength(46) });
             root.RowDefinitions.Add(new RowDefinition { Height = new GridLength(1, GridUnitType.Star) });
             root.RowDefinitions.Add(new RowDefinition { Height = new GridLength(58) });
+            root.Children.Add(BuildTitleBar(ln));
 
             _body = new StackPanel();
-            _body.Margin = new Thickness(26, 16, 26, 10);
+            _body.Margin = new Thickness(26, 6, 26, 10);
 
             ScrollViewer sv = new ScrollViewer();
             sv.VerticalScrollBarVisibility = ScrollBarVisibility.Auto;
             sv.HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled;
             sv.Content = _body;
-            Grid.SetRow(sv, 0);
+            sv.Background = System.Windows.Media.Brushes.Transparent;
+            Grid.SetRow(sv, 1);
             root.Children.Add(sv);
 
+            // 底部按钮条不再铺不透明底色，只留一条分隔线 ——
+            // 否则圆角处会露出一块直角方块
             Border foot = new Border();
-            foot.Background = Theme.Solid(Theme.Light
-                ? System.Windows.Media.Color.FromRgb(238, 240, 246)
-                : System.Windows.Media.Color.FromRgb(22, 22, 26));
-            Grid.SetRow(foot, 1);
+            foot.Background = System.Windows.Media.Brushes.Transparent;
+            foot.BorderThickness = new Thickness(0, 1, 0, 0);
+            foot.BorderBrush = Theme.Solid(System.Windows.Media.Color.FromArgb(
+                60, ln.R, ln.G, ln.B));
+            Grid.SetRow(foot, 2);
             root.Children.Add(foot);
 
             StackPanel footSp = new StackPanel();
@@ -82,7 +112,13 @@ namespace RackWpf
             ok.MouseLeftButtonUp += delegate { SaveAll(); };
             footSp.Children.Add(ok);
 
-            Content = root;
+            _shell.Child = root;
+
+            // 外面再套一层留边距，给阴影腾地方（紧贴窗口边缘会被裁掉）
+            Grid outer = new Grid();
+            outer.Margin = new Thickness(18);
+            outer.Children.Add(_shell);
+            Content = outer;
 
             try { BuildAll(); }
             catch (Exception ex)
@@ -90,6 +126,59 @@ namespace RackWpf
                 try { File.WriteAllText(Path.Combine(Store.Root, "settings_error.log"), ex.ToString()); } catch { }
                 throw;
             }
+        }
+
+        /// <summary>把外壳底色按给定 alpha 刷新。滑块拖动时实时调用，所以不走 Cfg 缓存。</summary>
+        private void ApplyShellAlpha(int alpha)
+        {
+            System.Windows.Media.Color c = Theme.Light
+                ? System.Windows.Media.Color.FromRgb(247, 247, 251)
+                : System.Windows.Media.Color.FromRgb(28, 28, 32);
+            _shell.Background = Theme.Solid(System.Windows.Media.Color.FromArgb(
+                (byte)alpha, c.R, c.G, c.B));
+        }
+
+        /// <summary>自绘标题栏：左边标题，右边关闭钮，整条可以拖动。</summary>
+        private Grid BuildTitleBar(System.Windows.Media.Color ln)
+        {
+            Grid bar = new Grid();
+
+            TextBlock ttl = new TextBlock();
+            ttl.Text = "Rack 设置";
+            ttl.FontSize = 14;
+            ttl.FontWeight = FontWeights.SemiBold;
+            ttl.VerticalAlignment = VerticalAlignment.Center;
+            ttl.Margin = new Thickness(20, 0, 0, 0);
+            bar.Children.Add(ttl);
+
+            Border xb = new Border();
+            xb.Width = 34;
+            xb.Height = 30;
+            xb.CornerRadius = new CornerRadius(7);
+            xb.HorizontalAlignment = HorizontalAlignment.Right;
+            xb.VerticalAlignment = VerticalAlignment.Center;
+            xb.Margin = new Thickness(0, 0, 14, 0);
+            xb.Background = System.Windows.Media.Brushes.Transparent;
+
+            TextBlock xt = new TextBlock();
+            xt.Text = "✕";
+            xt.FontSize = 13;
+            xt.HorizontalAlignment = HorizontalAlignment.Center;
+            xt.VerticalAlignment = VerticalAlignment.Center;
+            xt.Foreground = Theme.Solid(Theme.TextDim);
+            xb.Child = xt;
+
+            xb.MouseEnter += delegate { xb.Background = Theme.Solid(Theme.Hover); };
+            xb.MouseLeave += delegate { xb.Background = System.Windows.Media.Brushes.Transparent; };
+            xb.MouseLeftButtonUp += delegate { Close(); };
+            bar.Children.Add(xb);
+
+            // 没有系统标题栏，拖动只能自己实现；放在整条上所以点标题也能拖
+            bar.MouseLeftButtonDown += delegate
+            {
+                try { DragMove(); } catch { }
+            };
+            return bar;
         }
 
         // ── 基础控件 ──
@@ -139,6 +228,50 @@ namespace RackWpf
             t.TextWrapping = TextWrapping.Wrap;
             t.Margin = new Thickness(0, 6, 0, 0);
             _body.Children.Add(t);
+        }
+
+        /// <summary>
+        /// 一行「说明 + 滑块 + 数字」。返回滑块本身，方便调用方读值或挂实时预览。
+        /// </summary>
+        private Slider AddAlphaSlider(string label, int initial)
+        {
+            TextBlock cap = new TextBlock();
+            cap.Text = label;
+            cap.FontSize = 11.5;
+            cap.Foreground = Theme.Solid(Theme.TextDim);
+            cap.TextWrapping = TextWrapping.Wrap;
+            cap.Margin = new Thickness(0, 12, 0, 4);
+            _body.Children.Add(cap);
+
+            Grid row = new Grid();
+            row.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+            row.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(56) });
+
+            Slider bar = new Slider();
+            bar.Minimum = 0;
+            bar.Maximum = 255;
+            bar.Value = Math.Max(0, Math.Min(255, initial));
+            bar.SmallChange = 5;
+            bar.LargeChange = 20;
+            bar.VerticalAlignment = VerticalAlignment.Center;
+            // 点轨道直接跳到该点，比默认的"走一格"更符合直觉
+            bar.IsMoveToPointEnabled = true;
+            Grid.SetColumn(bar, 0);
+            row.Children.Add(bar);
+
+            TextBlock val = new TextBlock();
+            val.Text = ((int)bar.Value).ToString();
+            val.FontSize = 12.5;
+            val.Foreground = Theme.Solid(Theme.Accent);
+            val.VerticalAlignment = VerticalAlignment.Center;
+            val.HorizontalAlignment = HorizontalAlignment.Right;
+            Grid.SetColumn(val, 1);
+            row.Children.Add(val);
+
+            bar.ValueChanged += delegate { val.Text = ((int)bar.Value).ToString(); };
+
+            _body.Children.Add(row);
+            return bar;
         }
 
         private CheckBox AddCheck(string text, bool value)
@@ -361,6 +494,17 @@ namespace RackWpf
             }
             _body.Children.Add(presets);
 
+            // ── 菜单 / 设置窗口各自的透明度 ──
+            _menuAlphaBar = AddAlphaSlider(
+                "右键菜单底色的不透明度（0 = 全透明，255 = 完全不透明）", Cfg.MenuAlpha);
+            _winAlphaBar = AddAlphaSlider(
+                "这个设置窗口底色的不透明度", Cfg.WinAlpha);
+            _winAlphaBar.ValueChanged += delegate
+            {
+                ApplyShellAlpha((int)_winAlphaBar.Value);
+            };
+            Hint("设置窗口这一条拖动时就变；菜单那一条保存后，下次右键就生效，不用重启。");
+
             Border resetPos = MakeButton("重置抽屉位置", 122, false);
             resetPos.HorizontalAlignment = HorizontalAlignment.Left;
             resetPos.Margin = new Thickness(0, 12, 0, 0);
@@ -482,6 +626,8 @@ namespace RackWpf
             Cfg.SetBool("beh.pinByDefault", _pinChk.IsChecked == true);
             Cfg.Set("ui.theme", _darkChk.IsChecked == true ? "dark" : "light");
             Cfg.SetInt("ui.alpha", (int)_alphaBar.Value);
+            Cfg.SetInt("ui.menuAlpha", (int)_menuAlphaBar.Value);
+            Cfg.SetInt("ui.winAlpha", (int)_winAlphaBar.Value);
             Cfg.Set("ui.textColor", _textColor);
             Cfg.SetBool("ui.textShadow", _shadowChk.IsChecked == true);
 

@@ -292,6 +292,8 @@ namespace RackWpf
                 sb.AppendLine("; ui.textShadow  1 = 文字带淡投影（默认），0 = 不要");
                 sb.AppendLine("; ui.alpha       那层纱的浓淡 0-255。越小越透：");
                 sb.AppendLine(";                0 = 完全透明（默认，只剩图标和文字），150 = 淡白底，230 ≈ 实心");
+                sb.AppendLine("; ui.menuAlpha   右键菜单底色的不透明度 0-255。245 ≈ 几乎不透明，180 = 能透出背后");
+                sb.AppendLine("; ui.winAlpha    设置窗口底色的不透明度 0-255。同上");
                 sb.AppendLine();
                 sb.AppendLine("; ── 行为 ──");
                 sb.AppendLine("; beh.keepDesktop 1 = 拖进抽屉时保留桌面原件（等于复制一份）");
@@ -309,6 +311,8 @@ namespace RackWpf
                 sb.AppendLine("ui.textShadow=" + (TextShadow ? "1" : "0"));
                 sb.AppendLine("ui.posX=" + PosX);
                 sb.AppendLine("ui.posY=" + PosY);
+                sb.AppendLine("ui.menuAlpha=" + MenuAlpha);
+                sb.AppendLine("ui.winAlpha=" + WinAlpha);
                 sb.AppendLine("beh.keepDesktop=" + (KeepDesktop ? "1" : "0"));
                 sb.AppendLine("beh.singleClick=" + (SingleClickLaunch ? "1" : "0"));
                 sb.AppendLine("beh.pinByDefault=" + (PinByDefault ? "1" : "0"));
@@ -347,6 +351,12 @@ namespace RackWpf
         internal static bool TextShadow { get { return Get("ui.textShadow", "1") == "1"; } }
         /// <summary>那层纱的 alpha。越小越透。</summary>
         internal static int Alpha { get { return GetInt("ui.alpha", 0); } }
+        /// <summary>右键菜单底色的 alpha。默认 245：几乎实心，但边缘仍透一点。</summary>
+        internal static int MenuAlpha { get { return ClampAlpha(GetInt("ui.menuAlpha", 245)); } }
+        /// <summary>设置窗口底色的 alpha。</summary>
+        internal static int WinAlpha { get { return ClampAlpha(GetInt("ui.winAlpha", 245)); } }
+        /// <summary>把手改配置写出的越界 alpha 夹回 0-255，免得窗口直接看不见。</summary>
+        private static int ClampAlpha(int v) { return v < 0 ? 0 : (v > 255 ? 255 : v); }
         internal static bool KeepDesktop { get { return Get("beh.keepDesktop", "0") == "1"; } }
         internal static bool SingleClickLaunch { get { return Get("beh.singleClick", "0") == "1"; } }
         /// <summary>打开抽屉时是否默认钉住（钉住 = 保持常开、点外面不自动关）</summary>
