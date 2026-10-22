@@ -297,6 +297,7 @@ namespace RackWpf
                 sb.AppendLine("; beh.keepDesktop 1 = 拖进抽屉时保留桌面原件（等于复制一份）");
                 sb.AppendLine(";                 0 = 移走（桌面才会变干净）");
                 sb.AppendLine("; beh.singleClick 1 = 左键单击就启动；0 = 双击启动");
+                sb.AppendLine("; beh.pinByDefault 1 = 打开抽屉默认钉住；0 = 默认不钉住（点外面自动关）");
                 sb.AppendLine("; beh.hotkey      全局快捷键，留空 = 不要热键");
                 sb.AppendLine();
                 sb.AppendLine("; ── 窗口位置 ── -999999 表示没记录过，回右下角默认位置");
@@ -310,6 +311,7 @@ namespace RackWpf
                 sb.AppendLine("ui.posY=" + PosY);
                 sb.AppendLine("beh.keepDesktop=" + (KeepDesktop ? "1" : "0"));
                 sb.AppendLine("beh.singleClick=" + (SingleClickLaunch ? "1" : "0"));
+                sb.AppendLine("beh.pinByDefault=" + (PinByDefault ? "1" : "0"));
                 sb.AppendLine("beh.hotkey=" + HotkeyText);
 
                 File.WriteAllText(FilePath, sb.ToString(), Encoding.UTF8);
@@ -347,6 +349,8 @@ namespace RackWpf
         internal static int Alpha { get { return GetInt("ui.alpha", 0); } }
         internal static bool KeepDesktop { get { return Get("beh.keepDesktop", "0") == "1"; } }
         internal static bool SingleClickLaunch { get { return Get("beh.singleClick", "0") == "1"; } }
+        /// <summary>打开抽屉时是否默认钉住（钉住 = 保持常开、点外面不自动关）</summary>
+        internal static bool PinByDefault { get { return Get("beh.pinByDefault", "1") == "1"; } }
         internal static string HotkeyText { get { return Get("beh.hotkey", "Ctrl+Alt+Space"); } }
         internal static int PosX { get { return GetInt("ui.posX", -999999); } }
         internal static int PosY { get { return GetInt("ui.posY", -999999); } }

@@ -18,6 +18,7 @@ namespace RackWpf
         private ListBox _groupList;
         private CheckBox _keepChk;
         private CheckBox _singleChk;
+        private CheckBox _pinChk;
         private CheckBox _darkChk;
         private CheckBox _autoChk;
         private TextBox _hotkeyBox;
@@ -223,6 +224,9 @@ namespace RackWpf
             // 点图标时
             SectionTitle("点图标时", 16, 14, true);
             _singleChk = AddCheck("左键单击就启动（不勾 = 双击启动，更不容易误触）", Cfg.SingleClickLaunch);
+            SectionTitle("抽屉行为", 16, 14, true);
+            _pinChk = AddCheck("打开时默认钉住（保持常开，点外面不关）", Cfg.PinByDefault);
+            Hint("不勾选的话，点一下外面抽屉就自己收起 —— 打开一个软件就会自动关闭。");
 
             HR();
 
@@ -475,6 +479,7 @@ namespace RackWpf
         {
             Cfg.SetBool("beh.keepDesktop", _keepChk.IsChecked == true);
             Cfg.SetBool("beh.singleClick", _singleChk.IsChecked == true);
+            Cfg.SetBool("beh.pinByDefault", _pinChk.IsChecked == true);
             Cfg.Set("ui.theme", _darkChk.IsChecked == true ? "dark" : "light");
             Cfg.SetInt("ui.alpha", (int)_alphaBar.Value);
             Cfg.Set("ui.textColor", _textColor);

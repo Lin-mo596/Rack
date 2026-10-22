@@ -54,7 +54,7 @@ namespace RackWpf
 
         internal DockWindow(bool startPinned)
         {
-            _pinned = true;   // 默认就钉住：防误关，但不锁位置
+            _pinned = startPinned || Cfg.PinByDefault;   // 默认值可在设置里改
 
             WindowStyle = WindowStyle.None;
             AllowsTransparency = false;          // 关键：不能是分层窗口
@@ -697,14 +697,26 @@ namespace RackWpf
             if (!_pinned) Close();
         }
 
+        /// <summary>
+        /// 统一样式的右键菜单：圆角、跟随主题、跟托盘菜单观感一致。
+        /// WPF 的 ContextMenu 默认是方角 + 系统灰，在透明抽屉上很出戏。
+        /// </summary>
+        private static ContextMenu MakeStyledMenu()
+        {
+            // 2026-10-20 排查记录：自定义 ControlTemplate 会让 ContextMenu 测量塌成 1x1
+            // （右键后出现 3 个 1x1@(0,0) 的隐藏窗口），菜单完全不可见。
+            // 现已回退到最简形态，先确认基线可用，再做美化。
+            ContextMenu menu = new ContextMenu();
+            menu.FontFamily = Theme.Font;
+            menu.FontSize = 12.5;
+            return menu;
+        }
         // ── 右键菜单 ──
         private void ShowTileMenu(FrameworkElement owner, string path)
         {
             _suppressClose = true;
 
-            ContextMenu menu = new ContextMenu();
-            menu.FontFamily = Theme.Font;
-            menu.FontSize = 12;
+            ContextMenu menu = MakeStyledMenu();
 
             MenuItem open = new MenuItem();
             open.Header = "打开";
